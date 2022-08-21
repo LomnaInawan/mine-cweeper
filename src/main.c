@@ -1,10 +1,22 @@
 #include <ncurses.h>
 
 WINDOW *game_win;
-int screenX, screenY, cursorX, cursorY;
+WINDOW *game_frame;
+int screenX, screenY, cursorX = 0, cursorY = 0;
 char input = 'a';
-char boardA[81];
-char boardB[81];
+char boardA[81]; //The board with mines and numbers
+char boardB[81]; //The board with tiles
+char board_str[9][17] ={
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"},
+                      {"# # # # # # # # #"}
+                      };
 
 int boardIndex(int x, int y){
   return (x * 9 + y);
@@ -33,6 +45,8 @@ void inputFunction(){
 }
 
 void writeBoard(){
+  for(int i = 0; i < 9; i++)
+    mvwprintw(game_win, i, 0, board_str[i]);
 }
 
 int main(void){
@@ -47,20 +61,19 @@ int main(void){
   noecho(); //Don't show user input on screen
   refresh();
   getmaxyx(stdscr, screenY, screenX); //Get terminal dimensions
-  game_win = newwin(12,22,0,0); //Create the game window
-  box(game_win, 0, 0); //For the border for game window
-  wprintw(game_win, "Hello"); //Print hello in window
-  wrefresh(game_win);
-
-  getyx(game_win, cursorY, cursorX);
+  game_win = newwin(9,17,1,2); //Create the game window
+  game_frame = newwin(11,21,0,0); //Create the game frame
+  box(game_frame, 0, 0); //For the border for game window
+  wprintw(game_frame, "Mines"); //Print mines in frame
+  wrefresh(game_frame);
 
   //main game loop
   while(input != 'c'){
-    inputFunction();
     writeBoard();
     wmove(game_win, cursorY, cursorX);
     getyx(game_win, cursorY, cursorX);
     wrefresh(game_win);
+    inputFunction();
   }
 
   endwin();
