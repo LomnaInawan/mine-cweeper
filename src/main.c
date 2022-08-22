@@ -1,8 +1,10 @@
 #include <ncurses.h>
+#include <stdlib.h>
+#include <time.h>
 
 WINDOW *game_win;
 WINDOW *game_frame;
-int screenX, screenY, cursorX = 0, cursorY = 0;
+int screenX, screenY, cursorX = 0, cursorY = 0, moves = 0;
 char input = 'a';
 char boardA[81]; //The board with mines and numbers
 char boardB[81]; //The board with tiles
@@ -22,21 +24,70 @@ int boardIndex(int x, int y){
   return (x * 9 + y);
 }
 
+char TileNumber(int x, int y){
+  if(boardA[boardIndex(x,y)] == 'm')
+    return 'm';
+  int surrounding[] = {0,1,
+                       1,0,
+                       1,1,
+                       -1,-1,
+                       -1,0,
+                       0,-1,
+                       -1,1,
+                       1,-1};
+  int tempX, tempY;
+  char _no_mines = 48; //zero
+  for(int i = 0; i < 8; i++){
+    tempX = x + surrounding[2*i];
+    tempY = y + surrounding[2*i + 1];
+    if(tempX > 8 || tempX < 0 ||tempY < 0 || tempY > 8)
+      continue;
+    if(boardA[boardIndex(tempX, tempY)] == 'm')
+      _no_mines += 1;
+  }
+  return _no_mines;
+}
+
+void generateBoard(){
+  //Set initial board
+  for(int i = 0; i < 81; i++){
+    boardA[i] = '0';
+    boardB[i] = 's'; //h for hidden, s for shown
+  }
+  //Place mines
+  int _randNum;
+  for(int i = 0; i < 10; i++){
+    _randNum = rand() % 81;
+    while(boardA[_randNum] == 'm')
+      _randNum = rand() % 81;
+    boardA[_randNum] = 'm';
+  }
+  //Calculate numbers
+  for(int y = 0; y < 9; y++){
+    for(int x =0; x < 9; x++)
+      boardA[boardIndex(x,y)] = TileNumber(x,y);
+  }
+}
+
 void inputFunction(){
   input = getch();
   //Input switch case
   switch(input){
   case 'd':
-    cursorX += 2;
+    if(cursorX <= 14)
+      cursorX += 2;
     break;
   case 'a':
-    cursorX -= 2;
+    if(cursorX >= 2)
+      cursorX -= 2;
     break;
   case 'w':
-    cursorY--;
+    if(cursorY >= 1)
+      cursorY--;
     break;
   case 's':
-    cursorY++;
+    if(cursorY <= 7)
+      cursorY++;
     break;
   case 'q':
     input = 'c';
@@ -45,20 +96,28 @@ void inputFunction(){
 }
 
 void writeBoard(){
+  for(int y = 0; y < 9; y++){
+    char *str = board_str[y];
+    for(int x = 0; x < 9; x++){
+      if(boardB[boardIndex(x,y)] == 's')
+        board_str[y][2*x] = boardA[boardIndex(x,y)];
+      else if(boardB[boardIndex(x,y)] == 'h')
+        board_str[y][2*x] = '#';
+    }
+  }
+
   for(int i = 0; i < 9; i++)
     mvwprintw(game_win, i, 0, board_str[i]);
 }
 
 int main(void){
-  //Set initial board
-  for(int i = 0; i < 81; i++){
-    boardA[i] = '0';
-    boardB[i] = 'h';
-  }
+  srand(time(0));
+  generateBoard();
   //Initialize function
   initscr();
   raw(); //Take input without needing to press return
   noecho(); //Don't show user input on screen
+  mvprintw(11,0,"Press q or c to quit");
   refresh();
   getmaxyx(stdscr, screenY, screenX); //Get terminal dimensions
   game_win = newwin(9,17,1,2); //Create the game window
