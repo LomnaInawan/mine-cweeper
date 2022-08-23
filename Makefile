@@ -1,2 +1,2 @@
 start:
-	gcc src/main.c -o build/test -lncurses
+	gcc src/main.c -o build/test -Os -lncurses

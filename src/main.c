@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define boardIndex(x,y) (x*9+y)
+
 WINDOW *game_win;
 WINDOW *game_frame;
 int screenX, screenY, cursorX = 0, cursorY = 0, moves = 0;
@@ -20,21 +22,18 @@ char board_str[9][17] ={
                       {"# # # # # # # # #"}
                       };
 
-int boardIndex(int x, int y){
-  return (x * 9 + y);
-}
+int surrounding[] = {0,1,
+                     1,0,
+                     1,1,
+                     -1,-1,
+                     -1,0,
+                     0,-1,
+                     -1,1,
+                     1,-1};
 
 char TileNumber(int x, int y){
   if(boardA[boardIndex(x,y)] == 'm')
     return 'm';
-  int surrounding[] = {0,1,
-                       1,0,
-                       1,1,
-                       -1,-1,
-                       -1,0,
-                       0,-1,
-                       -1,1,
-                       1,-1};
   int tempX, tempY;
   char _no_mines = 48; //zero
   for(int i = 0; i < 8; i++){
@@ -48,11 +47,29 @@ char TileNumber(int x, int y){
   return _no_mines;
 }
 
+void clearSurrounding(int x, int y){
+  boardB[boardIndex(x,y)] = 'm'; //mark the tile as visited
+
+  int tempX, tempY;
+  for(int i = 0; i < 8; i++){
+    tempX = x + surrounding[2*i];
+    tempY = y + surrounding[2*i + 1];
+    if(tempX > 8 || tempX < 0 ||tempY < 0 || tempY > 8)
+      continue;
+    if(boardA[boardIndex(tempX, tempY)] == '0' && boardB[boardIndex(tempX, tempY)] != 'm')
+      clearSurrounding(tempX, tempY);
+    else if(boardB[boardIndex(tempX, tempY)] == 'h')
+      boardB[boardIndex(tempX, tempY)] = 's';
+  }
+
+  boardB[boardIndex(x,y)] = 's'; //return the tile to normal status
+}
+
 void generateBoard(){
   //Set initial board
   for(int i = 0; i < 81; i++){
-    boardA[i] = '0';
-    boardB[i] = 's'; //h for hidden, s for shown
+    boardA[i] = '0'; //Numbers to show number of mines, m to show mines
+    boardB[i] = 'h'; //h for hidden, s for shown
   }
   //Place mines
   int _randNum;
@@ -88,6 +105,13 @@ void inputFunction(){
   case 's':
     if(cursorY <= 7)
       cursorY++;
+    break;
+  case 'e':
+    //Reveal tile and check if 0 or a mine
+    if(boardA[boardIndex(cursorX / 2, cursorY)] == '0')
+      clearSurrounding(cursorX/2 , cursorY);
+    if(boardB[boardIndex(cursorX / 2, cursorY)] == 'h')
+      boardB[boardIndex(cursorX / 2, cursorY)] = 's';
     break;
   case 'q':
     input = 'c';
