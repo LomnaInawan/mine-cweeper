@@ -4,6 +4,9 @@
 
 #define boardIndex(x,y) (x*9+y)
 
+char currentGameState = 'p';
+int _correct_mines = 0;
+
 WINDOW *game_win;
 WINDOW *game_frame;
 int screenX, screenY, cursorX = 0, cursorY = 0, moves = 0;
@@ -56,9 +59,10 @@ void clearSurrounding(int x, int y){
     tempY = y + surrounding[2*i + 1];
     if(tempX > 8 || tempX < 0 ||tempY < 0 || tempY > 8)
       continue;
-    if(boardA[boardIndex(tempX, tempY)] == '0' && boardB[boardIndex(tempX, tempY)] != 'm')
+    else if(boardA[boardIndex(tempX, tempY)] == '0' && boardB[boardIndex(tempX, tempY)] != 'm')
       clearSurrounding(tempX, tempY);
-    else if(boardB[boardIndex(tempX, tempY)] == 'h')
+
+    if(boardB[boardIndex(tempX, tempY)] == 'h' && boardA[boardIndex(tempX, tempY)] != 'm')
       boardB[boardIndex(tempX, tempY)] = 's';
   }
 
@@ -86,10 +90,26 @@ void generateBoard(){
   }
 }
 
+void gameWin() {
+  currentGameState = 'w';
+  mvprintw(13, 0, "You Won!");
+}
+
+void restart(){
+  generateBoard();
+  mvprintw(13, 0, "                                                     ");
+  currentGameState = 'p';
+  mvprintw(cursorY + 1, cursorX + 2, "");
+  _correct_mines = 0;
+}
+
 void inputFunction(){
   input = getch();
   //Input switch case
   switch(input){
+  case 'r':
+    restart();
+    break;
   case 'd':
     if(cursorX <= 14)
       cursorX += 2;
@@ -107,11 +127,32 @@ void inputFunction(){
       cursorY++;
     break;
   case 'e':
-    //Reveal tile and check if 0 or a mine
-    if(boardA[boardIndex(cursorX / 2, cursorY)] == '0')
-      clearSurrounding(cursorX/2 , cursorY);
-    if(boardB[boardIndex(cursorX / 2, cursorY)] == 'h')
-      boardB[boardIndex(cursorX / 2, cursorY)] = 's';
+    if(currentGameState != 'l' || currentGameState != 'w'){
+      //Reveal tile and check if 0 or a mine
+      if(boardA[boardIndex(cursorX / 2, cursorY)] == '0')
+        clearSurrounding(cursorX/2 , cursorY);
+      if(boardB[boardIndex(cursorX / 2, cursorY)] == 'h'){
+        boardB[boardIndex(cursorX / 2, cursorY)] = 's';
+        if(boardA[boardIndex(cursorX / 2, cursorY)] == 'm'){
+          currentGameState = 'l';
+          mvprintw(13, 0, "You stepped on a mine!");
+        }
+      }
+    }
+    break;
+  case 'f':
+    if(boardB[boardIndex(cursorX/2, cursorY)] == 'h'){
+      boardB[boardIndex(cursorX/2, cursorY)] = 'f';
+      if(boardA[boardIndex(cursorX/2, cursorY)] == 'm')
+        _correct_mines += 1;
+    }else if(boardB[boardIndex(cursorX/2, cursorY)] == 'f'){
+      boardB[boardIndex(cursorX/2, cursorY)] = 'h';
+      if (boardA[boardIndex(cursorX / 2, cursorY)] == 'm')
+        _correct_mines -= 1;
+    }
+
+    if(_correct_mines >= 10)
+      gameWin();
     break;
   case 'q':
     input = 'c';
@@ -127,6 +168,8 @@ void writeBoard(){
         board_str[y][2*x] = boardA[boardIndex(x,y)];
       else if(boardB[boardIndex(x,y)] == 'h')
         board_str[y][2*x] = '#';
+      else if(boardB[boardIndex(x,y)] == 'f')
+        board_str[y][2*x] = 'F';
     }
   }
 
@@ -142,6 +185,7 @@ int main(void){
   raw(); //Take input without needing to press return
   noecho(); //Don't show user input on screen
   mvprintw(11,0,"Press q or c to quit");
+  mvprintw(12,0,"Press r to restart");
   refresh();
   getmaxyx(stdscr, screenY, screenX); //Get terminal dimensions
   game_win = newwin(9,17,1,2); //Create the game window
